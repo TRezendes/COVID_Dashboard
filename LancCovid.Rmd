@@ -1,0 +1,406 @@
+---
+title: "Lancaster County COVID Data 5/19/21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+install.packages('knitr')
+install.packages('tidyverse')
+install.packages('RSocrata')
+install.packages('jsonlite')
+install.packages('lubridate')
+install.packages('tidycensus')
+install.packages('GADMTools')
+```
+
+```{r, echo = FALSE}
+library(tidyverse)
+library(RSocrata)
+library(jsonlite)
+library(lubridate)
+library(tidycensus)
+library(GADMTools)
+```
+
+```{r}
+get_decennial(variables = 'POP', geography = 'county', year = 2020, state = 42)
+```
+
+
+```{r}
+#PA.counties.pop <- read_csv("/Users/trezendes/Downloads/co-est2020-alldata.csv") %>% filter(STNAME == "Pennsylvania") %>% select(CTYNAME, POPESTIMATE2020) %>% mutate_at("CTYNAME", str_replace, " County", "") %>% mutate_at("CTYNAME", str_replace, "McKean", "Mckean")
+
+PA.counties.pop <- read_csv("C:\\Users\\timothy\\Dropbox\\SDS Default Folder\\R Projects\\COVID\\co-est2020-alldata.csv") %>% filter(STNAME == "Pennsylvania") %>% select(CTYNAME, POPESTIMATE2020) %>% mutate_at("CTYNAME", str_replace, " County", "") %>% mutate_at("CTYNAME", str_replace, "McKean", "Mckean")
+
+PA.counties.pop
+```
+
+
+### Programatic Import
+```{r}
+covid.cases.latest.FULL <- read.socrata("https://data.pa.gov/resource/j72v-r42c.csv")
+
+covid.deaths.latest.FULL <- read.socrata("https://data.pa.gov/resource/fbgu-sqgp.csv")
+
+covid.hospital.latest.FULL <- read.socrata("https://data.pa.gov/resource/kayn-sjhx.csv")
+
+covid.vaccine.latest.FULL <- read.socrata("https://data.pa.gov/resource/bicw-3gwi.csv")
+
+covid.vaccine.latest.PHILLY <- as.data.frame(fromJSON("https://phl.carto.com/api/v2/sql?q=SELECT%20*%20FROM%20covid_vaccine_totals"))
+
+covid.by.ZIP <- read.socrata("https://data.pa.gov/resource/tsf6-pnaf.csv")
+```
+
+
+
+### Import at Work
+
+```{r}
+# covid.deaths.210521.FULL <- read_csv("G:\\Company Documentation\\Website\\Facebook\\COVID-19 Resources\\Datasets\\2021-05-21\\COVID-19_Aggregate_Death_Data_Current_Daily_County_Health (1).csv")
+# 
+# covid.hospital.210521.FULL <- read_csv("G:\\Company Documentation\\Website\\Facebook\\COVID-19 Resources\\Datasets\\2021-05-21\\COVID-19_Aggregate_Hospitalizations_Current_Daily_County_Health.csv")
+# 
+# covid.vaccine.210521.FULL <- read_csv("G:\\Company Documentation\\Website\\Facebook\\COVID-19 Resources\\Datasets\\2021-05-21\\COVID-19_Vaccinations_by_Day_by_County_of_Residence_Current_Health (1).csv")
+```
+
+### Import at Home
+
+```{r}
+# covid.cases.latest.FULL <- read_csv("/Users/trezendes/Documents/COVID\ Data/2021-05-22/COVID-19_Aggregate_Cases_Current_Daily_County_Health-2.csv")
+# 
+# covid.deaths.latest.FULL <- read_csv("/Users/trezendes/Documents/COVID\ Data/2021-05-22/COVID-19_Aggregate_Death_Data_Current_Daily_County_Health.csv")
+# 
+# covid.hospital.latest.FULL <- read_csv("/Users/trezendes/Documents/COVID\ Data/2021-05-22/COVID-19_Aggregate_Hospitalizations_Current_Daily_County_Health.csv")
+# 
+# covid.vaccine.latest.FULL <- read_csv("/Users/trezendes/Documents/COVID\ Data/2021-05-22/COVID-19_Vaccinations_by_Day_by_County_of_Residence_Current_Health.csv")
+```
+
+
+### Date Fix
+```{r}
+# covid.cases.latest.FULL$Date <- as.Date(covid.cases.latest.FULL$Date, format = "%m/%d/%Y")
+# 
+# covid.deaths.latest.FULL$Date.of.Death <- as.Date(covid.deaths.latest.FULL$Date.of.Death, format = "%m/%d/%Y")
+# 
+# covid.hospital.latest.FULL$Date.of.data <- as.Date(covid.hospital.latest.FULL$Date.of.data, format = "%m/%d/%Y")
+# 
+# covid.vaccine.latest.FULL$Date <- as.Date(covid.vaccine.latest.FULL$Date, format = "%m/%d/%Y")
+```
+
+
+```{r}
+covid.cases.latest.LANC <- covid.cases.latest.FULL %>% filter(covid.cases.latest.FULL$county == "Lancaster")
+
+covid.cases.latest.PA <- covid.cases.latest.FULL %>% filter(covid.cases.latest.FULL$county == "Pennsylvania")
+
+covid.deaths.latest.LANC <- covid.deaths.latest.FULL %>% filter(covid.deaths.latest.FULL$county == "Lancaster")
+
+covid.deaths.latest.PA <- covid.deaths.latest.FULL %>% filter(covid.deaths.latest.FULL$county == "Pennsylvania")
+
+covid.hospital.latest.LANC <- covid.hospital.latest.FULL %>% filter(covid.hospital.latest.FULL$county == "Lancaster")
+
+covid.hospital.latest.PA <- covid.hospital.latest.FULL %>% filter(covid.hospital.latest.FULL$county == "Pennsylvania")
+
+covid.vaccine.latest.LANC <- covid.vaccine.latest.FULL %>% filter(county == "Lancaster") %>% arrange(date) %>% mutate(total_partially_covered = cumsum(replace_na(partially_covered, 0)), total_fully_covered = cumsum(replace_na(fully_covered, 0)))
+
+covid.vaccine.latest.PA <- covid.vaccine.latest.FULL %>% group_by(date) %>% summarise(partiallycovered = sum(partially_covered, na.rm = TRUE), fullycovered = sum(fully_covered, na.rm = TRUE)) %>% mutate(county = "Pennsylvania") %>% relocate(county, .after = date) %>% arrange(date) %>% mutate(total_partially_covered = cumsum(replace_na(partiallycovered, 0)), total_fully_covered = cumsum(replace_na(fullycovered, 0)))
+
+covid.vaccine.latest.FULL <- covid.vaccine.latest.FULL %>% group_by(county) %>% arrange(date) %>% mutate(total_partially_covered = cumsum(replace_na(partially_covered, 0)), total_fully_covered = cumsum(replace_na(fully_covered, 0)))
+
+etl <- as.Date(substr(covid.vaccine.latest.PHILLY$rows.etl_timestamp, 1, 10))
+
+covid.vaccine.latest.FULLplus <- rbind(covid.vaccine.latest.FULL, covid.vaccine.latest.PA)
+
+covid.vaccine.latest.FULLplus$total_partially_covered <- if_else(covid.vaccine.latest.FULLplus$county == "Philadelphia" & covid.vaccine.latest.FULLplus$date >= (etl - 1), (covid.vaccine.latest.FULLplus$total_partially_covered + covid.vaccine.latest.PHILLY$rows.partially_vaccinated), covid.vaccine.latest.FULLplus$total_partially_covered)
+
+covid.vaccine.latest.FULLplus$total_fully_covered <- if_else(covid.vaccine.latest.FULLplus$county == "Philadelphia" & covid.vaccine.latest.FULLplus$date >= (etl - 1), (covid.vaccine.latest.FULLplus$total_fully_covered + covid.vaccine.latest.PHILLY$rows.fully_vaccinated), covid.vaccine.latest.FULLplus$total_fully_covered)
+
+covid.vaccine.latest.FULLplus <- merge(covid.vaccine.latest.FULLplus, PA.counties.pop, by.x = "county", by.y = "CTYNAME", all = TRUE) %>% mutate(percent_fully_covered = (100 * (total_fully_covered / POPESTIMATE2020)), .before = POPESTIMATE2020)
+```
+
+
+```{r}
+#covid.hospital.latest.LANC <- covid.hospital.latest.LANC %>% mutate(Population..2019. = 545724)
+
+#covid.vaccine.latest.LANC <- covid.vaccine.latest.LANC %>% mutate(Population..2019. = 545724)
+
+#covid.hospital.latest.PA <- covid.hospital.latest.PA %>% mutate(Population..2019. = 12801989)
+```
+
+```{r}
+ggplot() +
+  geom_area(data = covid.hospital.latest.LANC, mapping = aes(x = date, y = covid_patients), fill = "#0000ff") +
+  geom_area(data = covid.deaths.latest.LANC, mapping = aes(x = date, y = deaths_avg_new), fill = "#ff0000") +
+  coord_cartesian(xlim = c(as.POSIXct("2021-07-01"), as.POSIXct(Sys.Date())), ylim = c(0, 300))
+
+```
+
+```{r}
+covid.deaths.latest.LANC %>% filter(deaths_avg_new >= 1) %>% select(deaths_avg_new, date) %>% arrange(desc(date))
+```
+
+
+## Cases, Hospitalzations, Deaths as Percentage of Population (Lancaster County)
+```{r}
+ggplot() +
+ # geom_area(data = covid.cases.latest.LANC, mapping = aes(x = Date, y = (100 * (X7.day.Average.New.Cases/Population..2019.))), fill = "yellow") +
+ # geom_area(data = covid.hospital.latest.LANC, mapping = aes(x = Date.of.data, y = (100 * (COVID.19.Patients.Hospitalized/Population..2019.))), fill = "orange") +
+ # geom_area(data = covid.deaths.latest.LANC, mapping = aes(x = Date.of.Death, y = (100 * (X7.day.Average.New.Deaths/X2019.Population))), fill = "red") 
+  geom_area(data = covid.vaccine.latest.LANC, mapping = aes(x = date, y = (100 * (Partially.Covered/Population..2019.))), fill = "#0000aa80") +
+  geom_area(data = covid.vaccine.latest.LANC, mapping = aes(x = date, y = (100 * (Fully.Covered/Population..2019.))), fill = "#00ff0080")
+
+```
+
+
+
+```{r}
+ggplot() +
+  geom_area(covid.vaccine.latest.PA, mapping = aes(date, (100 * (total_fully_covered/12801989))), fill = "purple") +
+  #geom_area(covid.vaccine.latest.LANC, mapping = aes(date, total_fully_covered), fill = "turquoise") +
+  geom_area(covid.cases.latest.PA, mapping = aes(date, (10000 * (cases_avg_new/population))), fill = "red") +
+  scale_x_datetime(limits = c(as.POSIXct("2021-03-01"), NA))
+```
+
+### Vaccination Rate
+```{r}
+ggplot(covid.vaccine.latest.LANC) +
+  geom_area(mapping = aes(x = date, y = c(0, diff(total_fully_covered))), fill = "magenta", stat = "smooth")
+
+```
+
+```{r}
+df <- data.frame(0, diff(c(1, 3, 6, 10)), colnames = c("0", "diff"))
+df
+
+?data.frame
+```
+
+
+```{r}
+
+diff(covid.vaccine.latest.LANC$total_fully_covered)
+
+length(diff(covid.vaccine.latest.LANC$total_fully_covered))
+length(covid.vaccine.latest.LANC$date)
+
+#?geom_smooth
+```
+
+
+
+### Memorial Day
+```{r}
+yMAX <- covid.cases.latest.LANC$cases %>% max()
+LYToday <- covid.cases.latest.PA %>% filter(covid.cases.latest.PA$date == as.POSIXct(Sys.Date() - 365)) %>% select(cases)
+LYToday
+
+ggplot(covid.cases.latest.LANC) +
+  geom_smooth(aes(date, cases), se = T) +
+  scale_x_datetime(limits = c(as.POSIXct("2020-01-01"), as.POSIXct("2020-12-31"))) +
+  geom_vline(xintercept = as.POSIXct("2020-05-25"), color= "red") +
+  geom_vline(xintercept = as.POSIXct("2020-06-08"), color = "pink") +
+  geom_vline(xintercept = as.POSIXct("2020-07-04"), color = "blue") +
+  geom_vline(xintercept = as.POSIXct("2020-07-18"), color = "light blue") +
+  geom_vline(xintercept = as.POSIXct("2020-09-07"), color= "purple") +
+  geom_vline(xintercept = as.POSIXct("2020-09-21"), color= "lavender") +
+  geom_vline(xintercept = as.POSIXct("2020-12-25"), color= "white") +
+  geom_vline(xintercept = as.POSIXct(Sys.Date() - 730), color = "green") +
+  coord_cartesian(ylim = c(0, yMAX)) +
+  ggtitle("2020")
+
+ggplot(covid.cases.latest.LANC) +
+  geom_smooth(aes(date, cases), se = T) +
+  scale_x_datetime(limits = c(as.POSIXct("2021-01-01"), as.POSIXct("2021-12-31"))) +
+  geom_vline(xintercept = as.POSIXct("2021-01-08"), color= "gray") +
+  geom_vline(xintercept = as.POSIXct("2021-05-31"), color= "red") +
+  geom_vline(xintercept = as.POSIXct("2021-06-14"), color = "pink") +
+  geom_vline(xintercept = as.POSIXct("2021-07-04"), color = "blue") +
+  geom_vline(xintercept = as.POSIXct("2021-07-18"), color = "light blue") +
+  geom_vline(xintercept = as.POSIXct("2021-09-06"), color= "purple") +
+  geom_vline(xintercept = as.POSIXct("2021-09-20"), color= "lavender") +
+  geom_vline(xintercept = as.POSIXct("2021-12-25"), color= "white") +
+  geom_vline(xintercept = as.POSIXct(Sys.Date() - 365), color = "green") +
+  coord_cartesian(ylim = c(0, yMAX)) +
+  ggtitle("2021")
+
+ggplot(covid.cases.latest.LANC) +
+  geom_smooth(aes(date, cases), se = T) +
+  scale_x_datetime(limits = c(as.POSIXct("2022-01-01"), as.POSIXct("2022-12-31"))) +
+  geom_vline(xintercept = as.POSIXct("2022-01-08"), color= "gray") +
+  geom_vline(xintercept = as.POSIXct("2022-05-30"), color= "red") +
+  geom_vline(xintercept = as.POSIXct("2022-06-13"), color = "pink") +
+  geom_vline(xintercept = as.POSIXct("2022-07-04"), color = "blue") +
+  geom_vline(xintercept = as.POSIXct("2022-07-18"), color = "light blue") +
+  geom_vline(xintercept = as.POSIXct("2022-09-05"), color= "purple") +
+  geom_vline(xintercept = as.POSIXct("2022-09-19"), color= "lavender") +
+  geom_vline(xintercept = as.POSIXct("2022-12-25"), color= "white") +
+  geom_vline(xintercept = as.POSIXct(Sys.Date()), color = "green") +
+  coord_cartesian(ylim = c(0, yMAX)) +
+  ggtitle("2022")
+```
+
+
+### Year Over Year - Lancaster
+```{r}
+casesYrTransMog20.L <- covid.cases.latest.LANC %>% filter(date < as.POSIXct("2021-01-01")) %>% mutate(date = as.POSIXct(as.Date(date) + 731)) #%>% filter(date > as.POSIXct("2021-02-28"))
+
+casesYrTransMog21.L <- covid.cases.latest.LANC %>% filter(date < as.POSIXct("2022-01-01")) %>% filter(date > as.POSIXct("2020-12-31")) %>% mutate(date = as.POSIXct(as.Date(date) + 365)) #%>% filter(date > as.POSIXct("2021-02-28"))
+
+#covid.cases.latest.LANC %>% filter(date < as.POSIXct("2021-01-01"))
+
+yMAX.L <- covid.cases.latest.LANC %>% filter(date > as.POSIXct("2022-01-01")) %>% filter(cases < max(cases)) %>% select(cases) %>%  max()
+#yMAX <- covid.cases.latest.PA %>% filter(date > as.POSIXct("2021-03-01")) %>% select(cases) %>%  mean() * 1.5
+
+ggplot() +
+  geom_smooth(casesYrTransMog20.L, mapping = aes(date, cases, color = "2020"), se = T) +
+  geom_smooth(casesYrTransMog21.L, mapping = aes(date, cases, color = "2021"), se = T) +
+  geom_smooth(covid.cases.latest.LANC, mapping = aes(date, cases, color = "2022"), se = T) +
+  coord_cartesian(ylim = c(0, yMAX.L)) +
+  scale_x_datetime(limits = c(as.POSIXct("2022-01-01"), as.POSIXct("2022-12-31"))) +
+  scale_color_manual(name = "Year", breaks = c("2020", "2021", "2022"), values = c("blue", "red", "green")) +
+  geom_vline(xintercept = as.POSIXct("2022-05-25"), color= "light blue") +
+  geom_vline(xintercept = as.POSIXct("2022-05-31"), color= "pink") +
+  geom_vline(xintercept = as.POSIXct("2022-07-04"), color = "lavender") +
+  geom_vline(xintercept = as.POSIXct("2022-09-07"), color= "light blue") +
+  geom_vline(xintercept = as.POSIXct("2022-09-06"), color= "pink")
+
+
+```
+
+
+### Year Over Year - PA
+```{r}
+casesYrTransMog.P <- covid.cases.latest.PA %>% filter(date < as.POSIXct("2021-01-01")) %>% mutate(date = as.POSIXct(as.Date(date) + 366)) %>% filter(date > as.POSIXct("2021-02-28"))
+#casesYrTransMog.P %>% arrange(date)
+
+yMAX.P <- covid.cases.latest.PA %>% filter(date > as.POSIXct("2021-03-01")) %>% filter(cases < max(cases)) %>% select(cases) %>%  max()
+
+ggplot() +
+  geom_smooth(casesYrTransMog.P, mapping = aes(date, cases, color = "2020"), se = T) +
+  geom_smooth(covid.cases.latest.PA, mapping = aes(date, cases, color = "2021"), se = T) +
+  coord_cartesian(ylim = c(0, yMAX.P)) +
+  scale_x_datetime(limits = c(as.POSIXct("2021-03-01"), as.POSIXct("2021-12-31"))) +
+  scale_color_manual(name = "Year", breaks = c("2020", "2021"), values = c("blue", "red")) +
+  geom_vline(xintercept = as.POSIXct("2021-05-25"), color= "light blue") +
+  geom_vline(xintercept = as.POSIXct("2021-05-31"), color= "pink") +
+  geom_vline(xintercept = as.POSIXct("2021-07-04"), color = "lavender") +
+  geom_vline(xintercept = as.POSIXct("2021-09-07"), color= "light blue") +
+  geom_vline(xintercept = as.POSIXct("2021-09-06"), color= "pink")
+
+
+```
+
+
+```{r}
+
+covid.cases.latest.PA.perc <- covid.cases.latest.PA %>% filter(date > as.POSIXct("2020-03-05")) %>% mutate(yr_ago_date = as.POSIXct(as.Date(date) - 365)) %>% arrange(date) %>% mutate(prc_change = )
+
+covid.cases.latest.PA.perc
+```
+
+
+
+```{r}
+may.2020 <- filter(covid.cases.latest.LANC, (date >= as.Date("2020-05-01") & date <= as.Date("2020-06-30")))
+
+may.2021 <- filter(covid.cases.latest.LANC, (date >= as.Date("2021-05-01") & date <= as.Date("2021-06-30")))
+
+may.2020$date <- format(may.2020$Date, format = "%m-%d")
+may.2021$date <- format(may.2021$Date, format = "%m-%d")
+
+
+  
+```
+
+```{r}
+ggplot(covid.cases.latest.LANC) +
+  geom_smooth(mapping = aes(date, cases), se = FALSE) +
+  coord_cartesian(c(as.POSIXct("2021-06-01"), as.POSIXct("2022-02-28")))
+ggplot(covid.cases.latest.PA) +
+  geom_smooth(mapping = aes(date, cases), se = FALSE) +
+  coord_cartesian(c(as.POSIXct("2021-06-01"), as.POSIXct("2022-02-28")))
+
+```
+
+
+```{r}
+ggplot(covid.vaccine.latest.FULL) +
+  geom_area(mapping = aes(date, total_fully_covered, fill = county)) +
+  theme(legend.position = "none")
+```
+
+```{r}
+covid.vaccine.latest.FULLplus %>% group_by(county) %>% summarise(max_cov = max(total_fully_covered)) %>% arrange(county)
+```
+```{r}
+vaccine.ranking <- covid.vaccine.latest.FULLplus %>% group_by(county) %>% arrange(desc(percent_fully_covered)) %>% summarise(percent_fully_covered = round(first(percent_fully_covered), 2)) %>% arrange(desc(percent_fully_covered)) %>% mutate(rank = 1:n())
+vaccine.ranking
+```
+
+```{r}
+vaccine.ranking$county <- vaccine.ranking$county %>% factor() %>% reorder(vaccine.ranking$rank)
+
+vaccine.ranking %>% filter(rank <= 20 | county == "Pennsylvania") %>% 
+  ggplot() + 
+  geom_col(mapping  = aes(county, percent_fully_covered, fill = percent_fully_covered), show.legend = T)
+```
+
+
+
+```{r}
+top.20.counties <- covid.vaccine.latest.FULLplus %>% group_by(county) %>% arrange(desc(percent_fully_covered)) %>% summarise(percent_fully_covered = round(first(percent_fully_covered), 2), .groups = "keep") %>% arrange(desc(percent_fully_covered)) %>% head(20)
+
+covid.vaccine.latest.top.20 <- covid.vaccine.latest.FULLplus %>% filter(county %in% top.20.counties$county)
+
+covid.vaccine.latest.top.20 %>% 
+  mutate(county = fct_reorder(county, desc(percent_fully_covered))) %>%
+  ggplot() +
+  geom_area(mapping = aes(date, percent_fully_covered, fill = county), position = "identity") +
+  coord_cartesian(c(as.POSIXct("2021-01-01"), as.POSIXct("2021-08-07")))
+
+#covid.vaccine.latest.top.20 %>% filter(county == "Philadelphia") %>% ggplot() +
+  #geom_area(mapping = aes(date, percent_fully_covered)) +
+  #coord_cartesian(c(as.POSIXct("2021-06-01"), as.POSIXct("2021-07-07")))
+```
+
+
+```{r}
+cvPH1 <- covid.vaccine.latest.FULL %>% filter(county == "Philadelphia") %>% arrange(desc(date)) %>% head(1) %>% select(date, total_partially_covered, total_fully_covered)
+cvPH1
+
+```
+
+```{r}
+covid.vaccine.latest.FULL %>% filter(county == "Philadelphia" & date >= (etl-1))
+```
+
+```{r}
+DATE <- as.Date("2021-06-15")
+DATE2 <- as.Date("2020-06-15")
+
+df <- data.frame("date" = DATE, "y" = 6)
+df2 <- data.frame("date" = DATE2, "y" = 9)
+df <- rbind(df, df2)
+df
+
+plot1 <- ggplot(df, aes(date, y)) + 
+  geom_point()
+
+
+DATEa <- replace(DATE, "2021-", "")
+DATEa
+
+
+
+
+```
+
+### COVID by ZIP Code
+```{r}
+
+```
+

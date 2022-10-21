@@ -1,0 +1,19 @@
+---
+pagetitle: "Pennsylvania's Current COVID-19 Numbers"
+title: "Pennsylvania's Latest COVID-19 Numbers"
+author: "Timothy Rezendes"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(lubridate))
+suppressPackageStartupMessages(library(RSocrata))
+suppressPackageStartupMessages(library(jsonlite))
+suppressPackageStartupMessages(library(tidycensus))
+```
+
+## For `r format(today(), '%B %d, %Y')`
+
+
