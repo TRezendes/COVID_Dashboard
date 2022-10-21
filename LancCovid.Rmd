@@ -7,7 +7,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r}
+```{r, include=FALSE}
 install.packages('knitr')
 install.packages('tidyverse')
 install.packages('RSocrata')
@@ -15,6 +15,7 @@ install.packages('jsonlite')
 install.packages('lubridate')
 install.packages('tidycensus')
 install.packages('GADMTools')
+install.packages('yaml')
 ```
 
 ```{r, echo = FALSE}
@@ -24,7 +25,15 @@ library(jsonlite)
 library(lubridate)
 library(tidycensus)
 library(GADMTools)
+library(yaml)
 ```
+
+```{r}
+config <- yaml.load_file("secrets.yml")
+census_api_key(config$census$api_key)
+```
+
+
 
 ```{r}
 get_decennial(variables = 'POP', geography = 'county', year = 2020, state = 42)
@@ -32,9 +41,9 @@ get_decennial(variables = 'POP', geography = 'county', year = 2020, state = 42)
 
 
 ```{r}
-#PA.counties.pop <- read_csv("/Users/trezendes/Downloads/co-est2020-alldata.csv") %>% filter(STNAME == "Pennsylvania") %>% select(CTYNAME, POPESTIMATE2020) %>% mutate_at("CTYNAME", str_replace, " County", "") %>% mutate_at("CTYNAME", str_replace, "McKean", "Mckean")
+#PA.counties.pop <- read_csv("/Users/trezendes/Documents/COVID/co-est2020-alldata.csv") %>% filter(STNAME == "Pennsylvania") %>% select(CTYNAME, POPESTIMATE2020) %>% mutate_at("CTYNAME", str_replace, " County", "") %>% mutate_at("CTYNAME", str_replace, "McKean", "Mckean")
 
-PA.counties.pop <- read_csv("C:\\Users\\timothy\\Dropbox\\SDS Default Folder\\R Projects\\COVID\\co-est2020-alldata.csv") %>% filter(STNAME == "Pennsylvania") %>% select(CTYNAME, POPESTIMATE2020) %>% mutate_at("CTYNAME", str_replace, " County", "") %>% mutate_at("CTYNAME", str_replace, "McKean", "Mckean")
+PA.counties.pop <- read_csv("C:\\Users\\trezendes\\projects\\COVID\\co-est2020-alldata.csv") %>% filter(STNAME == "Pennsylvania") %>% select(CTYNAME, POPESTIMATE2020) %>% mutate_at("CTYNAME", str_replace, " County", "") %>% mutate_at("CTYNAME", str_replace, "McKean", "Mckean")
 
 PA.counties.pop
 ```
@@ -135,7 +144,7 @@ covid.vaccine.latest.FULLplus <- merge(covid.vaccine.latest.FULLplus, PA.countie
 ggplot() +
   geom_area(data = covid.hospital.latest.LANC, mapping = aes(x = date, y = covid_patients), fill = "#0000ff") +
   geom_area(data = covid.deaths.latest.LANC, mapping = aes(x = date, y = deaths_avg_new), fill = "#ff0000") +
-  coord_cartesian(xlim = c(as.POSIXct("2021-07-01"), as.POSIXct(Sys.Date())), ylim = c(0, 300))
+  coord_cartesian(xlim = c(as.POSIXct("2020-03-01"), as.POSIXct(Sys.Date())), ylim = c(0, 230))
 
 ```
 
@@ -243,12 +252,17 @@ ggplot(covid.cases.latest.LANC) +
   ggtitle("2022")
 ```
 
+```{r}
+casesYrTransMog21.L %>% filter(date > as.POSIXct("2022-12-01")) %>% arrange(date)
+```
+
+
 
 ### Year Over Year - Lancaster
 ```{r}
-casesYrTransMog20.L <- covid.cases.latest.LANC %>% filter(date < as.POSIXct("2021-01-01")) %>% mutate(date = as.POSIXct(as.Date(date) + 731)) #%>% filter(date > as.POSIXct("2021-02-28"))
+casesYrTransMog20.L <- covid.cases.latest.LANC %>% filter(date < as.POSIXct("2021-03-01")) %>% mutate(date = as.POSIXct(as.Date(date) + 731)) #%>% filter(date > as.POSIXct("2022-02-28"))
 
-casesYrTransMog21.L <- covid.cases.latest.LANC %>% filter(date < as.POSIXct("2022-01-01")) %>% filter(date > as.POSIXct("2020-12-31")) %>% mutate(date = as.POSIXct(as.Date(date) + 365)) #%>% filter(date > as.POSIXct("2021-02-28"))
+casesYrTransMog21.L <- covid.cases.latest.LANC %>% filter(date < as.POSIXct("2022-03-01")) %>% filter(date > as.POSIXct("2020-10-01")) %>% mutate(date = as.POSIXct(as.Date(date) + 365)) #%>% filter(date > as.POSIXct("2021-02-28"))
 
 #covid.cases.latest.LANC %>% filter(date < as.POSIXct("2021-01-01"))
 
@@ -268,30 +282,29 @@ ggplot() +
   geom_vline(xintercept = as.POSIXct("2022-09-07"), color= "light blue") +
   geom_vline(xintercept = as.POSIXct("2022-09-06"), color= "pink")
 
-
 ```
-
 
 ### Year Over Year - PA
 ```{r}
-casesYrTransMog.P <- covid.cases.latest.PA %>% filter(date < as.POSIXct("2021-01-01")) %>% mutate(date = as.POSIXct(as.Date(date) + 366)) %>% filter(date > as.POSIXct("2021-02-28"))
+casesYrTransMog20.P <- covid.cases.latest.PA %>% filter(date < as.POSIXct("2021-01-01")) %>% mutate(date = as.POSIXct(as.Date(date) + 731)) #%>% filter(date > as.POSIXct("2021-02-28"))
 #casesYrTransMog.P %>% arrange(date)
 
-yMAX.P <- covid.cases.latest.PA %>% filter(date > as.POSIXct("2021-03-01")) %>% filter(cases < max(cases)) %>% select(cases) %>%  max()
+casesYrTransMog21.P <- covid.cases.latest.PA %>% filter(date < as.POSIXct("2022-01-01")) %>% filter(date > as.POSIXct("2020-12-31")) %>% mutate(date = as.POSIXct(as.Date(date) + 365))
+
+yMAX.P <- covid.cases.latest.PA %>% filter(date > as.POSIXct("2022-01-01")) %>% filter(cases < max(cases)) %>% select(cases) %>%  max()
 
 ggplot() +
-  geom_smooth(casesYrTransMog.P, mapping = aes(date, cases, color = "2020"), se = T) +
-  geom_smooth(covid.cases.latest.PA, mapping = aes(date, cases, color = "2021"), se = T) +
+  geom_smooth(casesYrTransMog20.P, mapping = aes(date, cases, color = "2020"), se = T) +
+  geom_smooth(casesYrTransMog21.P, mapping = aes(date, cases, color = "2021"), se = T) +
+  geom_smooth(covid.cases.latest.PA, mapping = aes(date, cases, color = "2022"), se = T) +
   coord_cartesian(ylim = c(0, yMAX.P)) +
-  scale_x_datetime(limits = c(as.POSIXct("2021-03-01"), as.POSIXct("2021-12-31"))) +
-  scale_color_manual(name = "Year", breaks = c("2020", "2021"), values = c("blue", "red")) +
-  geom_vline(xintercept = as.POSIXct("2021-05-25"), color= "light blue") +
-  geom_vline(xintercept = as.POSIXct("2021-05-31"), color= "pink") +
-  geom_vline(xintercept = as.POSIXct("2021-07-04"), color = "lavender") +
-  geom_vline(xintercept = as.POSIXct("2021-09-07"), color= "light blue") +
-  geom_vline(xintercept = as.POSIXct("2021-09-06"), color= "pink")
-
-
+  scale_x_datetime(limits = c(as.POSIXct("2022-01-01"), as.POSIXct("2022-12-31"))) +
+  scale_color_manual(name = "Year", breaks = c("2020", "2021", "2022"), values = c("blue", "red", "green")) +
+  geom_vline(xintercept = as.POSIXct("2022-05-25"), color= "light blue") +
+  geom_vline(xintercept = as.POSIXct("2022-05-31"), color= "pink") +
+  geom_vline(xintercept = as.POSIXct("2022-07-04"), color = "lavender") +
+  geom_vline(xintercept = as.POSIXct("2022-09-07"), color= "light blue") +
+  geom_vline(xintercept = as.POSIXct("2022-09-06"), color= "pink")
 ```
 
 
@@ -319,10 +332,10 @@ may.2021$date <- format(may.2021$Date, format = "%m-%d")
 ```{r}
 ggplot(covid.cases.latest.LANC) +
   geom_smooth(mapping = aes(date, cases), se = FALSE) +
-  coord_cartesian(c(as.POSIXct("2021-06-01"), as.POSIXct("2022-02-28")))
+  coord_cartesian(c(as.POSIXct("2020-03-01"), as.POSIXct("2022-10-31")))
 ggplot(covid.cases.latest.PA) +
   geom_smooth(mapping = aes(date, cases), se = FALSE) +
-  coord_cartesian(c(as.POSIXct("2021-06-01"), as.POSIXct("2022-02-28")))
+  coord_cartesian(c(as.POSIXct("2020-03-01"), as.POSIXct("2022-10-31")))
 
 ```
 
