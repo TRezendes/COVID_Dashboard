@@ -41,7 +41,7 @@ get_decennial(variables = 'POP', geography = 'county', year = 2020, state = 42)
 
 
 ```{r}
-#PA.counties.pop <- read_csv("/Users/trezendes/Documents/COVID/co-est2020-alldata.csv") %>% filter(STNAME == "Pennsylvania") %>% select(CTYNAME, POPESTIMATE2020) %>% mutate_at("CTYNAME", str_replace, " County", "") %>% mutate_at("CTYNAME", str_replace, "McKean", "Mckean")
+#PA.counties.pop <- read_csv("/Users/trezendes/Documents/Projects/COVID_dashboard/co-est2020-alldata.csv") %>% filter(STNAME == "Pennsylvania") %>% select(CTYNAME, POPESTIMATE2020) %>% mutate_at("CTYNAME", str_replace, " County", "") %>% mutate_at("CTYNAME", str_replace, "McKean", "Mckean")
 
 PA.counties.pop <- read_csv("C:\\Users\\trezendes\\projects\\COVID\\co-est2020-alldata.csv") %>% filter(STNAME == "Pennsylvania") %>% select(CTYNAME, POPESTIMATE2020) %>% mutate_at("CTYNAME", str_replace, " County", "") %>% mutate_at("CTYNAME", str_replace, "McKean", "Mckean")
 
