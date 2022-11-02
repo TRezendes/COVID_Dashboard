@@ -14,7 +14,6 @@ install.packages('RSocrata')
 install.packages('jsonlite')
 install.packages('lubridate')
 install.packages('tidycensus')
-install.packages('GADMTools')
 install.packages('yaml')
 ```
 
@@ -24,7 +23,6 @@ library(RSocrata)
 library(jsonlite)
 library(lubridate)
 library(tidycensus)
-library(GADMTools)
 library(yaml)
 ```
 
