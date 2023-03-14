@@ -25,5 +25,4 @@ I don't imagine anyone cares about this except me. I would someday like to clean
 
 This section is really just a place to plug the book [Learning Statistics with R](https://github.com/djnavarro/rbook), by [Danielle Navarro](https://github.com/djnavarro). Why mention it? It doesn't actually have anything specific to do with this project. It is, however, the reason I understand R (and statistics, for that matter) at all. I struggled mightily with that class in my degree program, and this book got me through. I suspect anyone who gives a rip about R knows the book, but if you don't, give it a look. It's absolutely worth your time.
 
-
 ![GitHub](https://img.shields.io/github/license/trezendes/COVID_Dashboard?color=%238C4799)
